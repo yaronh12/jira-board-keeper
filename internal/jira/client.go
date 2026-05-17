@@ -76,10 +76,9 @@ func (c *httpClient) doRequest(ctx context.Context, method, path string, body in
 }
 
 type searchResponse struct {
-	StartAt    int              `json:"startAt"`
-	MaxResults int              `json:"maxResults"`
-	Total      int              `json:"total"`
-	Issues     []jiraIssueJSON  `json:"issues"`
+	Issues        []jiraIssueJSON `json:"issues"`
+	NextPageToken string          `json:"nextPageToken"`
+	IsLast        bool            `json:"isLast"`
 }
 
 type jiraIssueJSON struct {
@@ -135,13 +134,15 @@ func (c *httpClient) SearchIssues(ctx context.Context, jql string, opts SearchOp
 	}
 
 	var allIssues []Issue
-	startAt := 0
+	nextPageToken := ""
 
 	for {
 		params := url.Values{
 			"jql":        {jql},
-			"startAt":    {fmt.Sprintf("%d", startAt)},
 			"maxResults": {fmt.Sprintf("%d", maxResults)},
+		}
+		if nextPageToken != "" {
+			params.Set("nextPageToken", nextPageToken)
 		}
 		if len(opts.Fields) > 0 {
 			params.Set("fields", strings.Join(opts.Fields, ","))
@@ -166,14 +167,13 @@ func (c *httpClient) SearchIssues(ctx context.Context, jql string, opts SearchOp
 		}
 
 		c.logger.Debug("fetched issues page",
-			"startAt", startAt,
 			"returned", len(result.Issues),
-			"total", result.Total)
+			"isLast", result.IsLast)
 
-		startAt += len(result.Issues)
-		if startAt >= result.Total || len(result.Issues) == 0 {
+		if result.IsLast || len(result.Issues) == 0 {
 			break
 		}
+		nextPageToken = result.NextPageToken
 	}
 
 	return allIssues, nil

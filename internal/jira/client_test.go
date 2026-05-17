@@ -17,22 +17,19 @@ func TestSearchIssues_Pagination(t *testing.T) {
 		var resp searchResponse
 		if callCount == 1 {
 			resp = searchResponse{
-				StartAt:    0,
-				MaxResults: 2,
-				Total:      3,
 				Issues: []jiraIssueJSON{
 					{Key: "TEST-1", Fields: jiraFieldsJSON{Summary: "Issue 1", Labels: []string{}}},
 					{Key: "TEST-2", Fields: jiraFieldsJSON{Summary: "Issue 2", Labels: []string{"existing"}}},
 				},
+				NextPageToken: "page2",
+				IsLast:        false,
 			}
 		} else {
 			resp = searchResponse{
-				StartAt:    2,
-				MaxResults: 2,
-				Total:      3,
 				Issues: []jiraIssueJSON{
 					{Key: "TEST-3", Fields: jiraFieldsJSON{Summary: "Issue 3", Labels: []string{}}},
 				},
+				IsLast: true,
 			}
 		}
 
