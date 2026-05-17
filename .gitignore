@@ -1,0 +1,5 @@
+bin/
+jira-board-reporter
+*.exe
+.env
+coverage.out

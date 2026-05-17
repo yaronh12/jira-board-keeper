@@ -1,0 +1,32 @@
+jira:
+  base_url: "https://redhat.atlassian.net"
+
+team:
+  name: "Telco Platform Security & Tools Development"
+  members:
+    - "Yaron Hod"
+
+board:
+  label: "telco-sec-tools-team"
+  project_keys: []
+  jql_filter: ""
+
+slack:
+  enabled: false
+
+stale_thresholds:
+  epic: 60
+  story: 30
+  task: 30
+  bug: 30
+  sub_task: 30
+  default: 30
+
+label_sync:
+  lookback_days: 7
+
+status_report:
+  lookback_days: 7
+
+log_level: "debug"
+dry_run: false

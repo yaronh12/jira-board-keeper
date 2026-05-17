@@ -1,0 +1,48 @@
+# Jira configuration
+jira:
+  base_url: "https://your-instance.atlassian.net"
+  # Authentication via environment variables:
+  #   JIRA_EMAIL     - Your Jira account email
+  #   JIRA_API_TOKEN - API token from https://id.atlassian.com/manage-profile/security/api-tokens
+
+# Team configuration
+team:
+  name: "My Team"
+  members:
+    - "jsmith"
+    - "jdoe"
+    - "aturing"
+
+# Board/Label configuration
+board:
+  # Label added to team members' issues (used as the board filter)
+  label: "team-myteam-board"
+  # Project keys to scope the label-sync search
+  project_keys:
+    - "MYPROJ"
+  # Optional: custom JQL filter for reports (overrides label-based filtering)
+  jql_filter: ""
+
+# Slack configuration
+slack:
+  enabled: true
+  # Webhook URL via SLACK_WEBHOOK_URL environment variable
+
+# Stale issue thresholds (days without status change)
+stale_thresholds:
+  epic: 60
+  story: 30
+  task: 30
+  bug: 30
+  sub_task: 30
+  default: 30
+
+# Status report settings
+status_report:
+  lookback_days: 7
+
+# Logging
+log_level: "info"
+
+# Dry run mode (no writes to Jira or Slack)
+dry_run: false
