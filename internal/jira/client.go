@@ -157,6 +157,8 @@ func (c *httpClient) SearchIssues(ctx context.Context, jql string, opts SearchOp
 			return nil, fmt.Errorf("searching issues: %w", err)
 		}
 
+		c.logger.Debug("search response body", "body", string(respBody))
+
 		var result searchResponse
 		if err := json.Unmarshal(respBody, &result); err != nil {
 			return nil, fmt.Errorf("unmarshaling search response: %w", err)
