@@ -18,6 +18,14 @@ var labelSyncCmd = &cobra.Command{
 		}
 
 		jiraClient := jira.NewClient(cfg.Jira.BaseURL, cfg.Jira.Email, cfg.Jira.APIToken, logger)
+
+		user, err := jiraClient.GetCurrentUser(cmd.Context())
+		if err != nil {
+			logger.Warn("could not verify authenticated user", "error", err)
+		} else {
+			logger.Info("authenticated as", "user", user)
+		}
+
 		syncer := labelsync.New(jiraClient, cfg, logger)
 
 		result, err := syncer.Run(cmd.Context())

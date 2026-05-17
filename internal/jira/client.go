@@ -17,6 +17,7 @@ type Client interface {
 	SearchIssues(ctx context.Context, jql string, opts SearchOptions) ([]Issue, error)
 	AddLabel(ctx context.Context, issueKey string, label string) error
 	GetStatusChanges(ctx context.Context, issueKey string) ([]StatusChange, error)
+	GetCurrentUser(ctx context.Context) (string, error)
 }
 
 type httpClient struct {
@@ -179,6 +180,21 @@ func (c *httpClient) SearchIssues(ctx context.Context, jql string, opts SearchOp
 	}
 
 	return allIssues, nil
+}
+
+func (c *httpClient) GetCurrentUser(ctx context.Context) (string, error) {
+	respBody, err := c.doRequest(ctx, http.MethodGet, "/rest/api/3/myself", nil)
+	if err != nil {
+		return "", fmt.Errorf("getting current user: %w", err)
+	}
+	var user struct {
+		DisplayName  string `json:"displayName"`
+		EmailAddress string `json:"emailAddress"`
+	}
+	if err := json.Unmarshal(respBody, &user); err != nil {
+		return "", fmt.Errorf("unmarshaling user: %w", err)
+	}
+	return fmt.Sprintf("%s (%s)", user.DisplayName, user.EmailAddress), nil
 }
 
 func (c *httpClient) AddLabel(ctx context.Context, issueKey string, label string) error {

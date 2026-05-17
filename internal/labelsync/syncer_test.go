@@ -34,6 +34,10 @@ func (m *mockJiraClient) GetStatusChanges(_ context.Context, _ string) ([]jira.S
 	return nil, nil
 }
 
+func (m *mockJiraClient) GetCurrentUser(_ context.Context) (string, error) {
+	return "test (test@example.com)", nil
+}
+
 func TestRun_AllAlreadyLabeled(t *testing.T) {
 	mock := &mockJiraClient{
 		issues: []jira.Issue{
