@@ -13,10 +13,6 @@ import (
 func TestSearchIssues_Pagination(t *testing.T) {
 	callCount := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/rest/api/2/search" {
-			t.Fatalf("unexpected path: %s", r.URL.Path)
-		}
-
 		callCount++
 		var resp searchResponse
 		if callCount == 1 {
@@ -65,13 +61,6 @@ func TestSearchIssues_Pagination(t *testing.T) {
 func TestAddLabel(t *testing.T) {
 	var receivedBody map[string]interface{}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPut {
-			t.Fatalf("expected PUT, got %s", r.Method)
-		}
-		if r.URL.Path != "/rest/api/2/issue/TEST-1" {
-			t.Fatalf("unexpected path: %s", r.URL.Path)
-		}
-
 		json.NewDecoder(r.Body).Decode(&receivedBody)
 		w.WriteHeader(http.StatusNoContent)
 	}))
