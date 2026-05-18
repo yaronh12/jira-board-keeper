@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/yaronhod/jira-board-reporter/internal/config"
+	"github.com/yaronhod/jira-board-keeper/internal/config"
 )
 
 var (
@@ -18,7 +18,7 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "jira-board-reporter",
+	Use:   "jira-board-keeper",
 	Short: "Automated Jira board management and Slack reporting",
 	Long:  "A tool that syncs team labels on Jira issues, sends weekly status reports, and detects stale issues.",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {

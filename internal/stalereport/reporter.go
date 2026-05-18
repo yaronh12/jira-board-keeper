@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yaronhod/jira-board-reporter/internal/config"
-	"github.com/yaronhod/jira-board-reporter/internal/jira"
-	"github.com/yaronhod/jira-board-reporter/internal/slack"
+	"github.com/yaronhod/jira-board-keeper/internal/config"
+	"github.com/yaronhod/jira-board-keeper/internal/jira"
+	"github.com/yaronhod/jira-board-keeper/internal/slack"
 )
 
 type Reporter struct {

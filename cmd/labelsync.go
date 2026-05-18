@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/yaronhod/jira-board-reporter/internal/jira"
-	"github.com/yaronhod/jira-board-reporter/internal/labelsync"
+	"github.com/yaronhod/jira-board-keeper/internal/jira"
+	"github.com/yaronhod/jira-board-keeper/internal/labelsync"
 )
 
 var labelSyncCmd = &cobra.Command{

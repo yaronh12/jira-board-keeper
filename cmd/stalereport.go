@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/yaronhod/jira-board-reporter/internal/jira"
-	"github.com/yaronhod/jira-board-reporter/internal/slack"
-	"github.com/yaronhod/jira-board-reporter/internal/stalereport"
+	"github.com/yaronhod/jira-board-keeper/internal/jira"
+	"github.com/yaronhod/jira-board-keeper/internal/slack"
+	"github.com/yaronhod/jira-board-keeper/internal/stalereport"
 )
 
 var (

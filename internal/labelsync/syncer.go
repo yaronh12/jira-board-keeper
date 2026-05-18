@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/yaronhod/jira-board-reporter/internal/config"
-	"github.com/yaronhod/jira-board-reporter/internal/jira"
+	"github.com/yaronhod/jira-board-keeper/internal/config"
+	"github.com/yaronhod/jira-board-keeper/internal/jira"
 )
 
 type SyncResult struct {

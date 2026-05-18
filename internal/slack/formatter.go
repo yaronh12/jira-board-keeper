@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/yaronhod/jira-board-reporter/internal/jira"
+	"github.com/yaronhod/jira-board-keeper/internal/jira"
 )
 
 type Message struct {

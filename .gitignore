@@ -1,5 +1,5 @@
 bin/
-jira-board-reporter
+jira-board-keeper
 *.exe
 .env
 coverage.out

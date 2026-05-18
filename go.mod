@@ -1,4 +1,4 @@
-module github.com/yaronhod/jira-board-reporter
+module github.com/yaronhod/jira-board-keeper
 
 go 1.26.3
 

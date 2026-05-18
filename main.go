@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/yaronhod/jira-board-reporter/cmd"
+	"github.com/yaronhod/jira-board-keeper/cmd"
 )
 
 func main() {

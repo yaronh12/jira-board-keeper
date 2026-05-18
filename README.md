@@ -1,4 +1,4 @@
-# jira-board-reporter
+# jira-board-keeper
 
 Automated Jira board management and Slack reporting. Runs as scheduled GitHub Actions jobs — fork the repo, add your config and secrets, and it works for any team.
 
@@ -31,14 +31,14 @@ export SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."
 make build
 
 # Dry run (no writes to Jira or Slack)
-./bin/jira-board-reporter label-sync --config config.yaml --dry-run
-./bin/jira-board-reporter status-report --config config.yaml --dry-run
-./bin/jira-board-reporter stale-report --config config.yaml --dry-run
+./bin/jira-board-keeper label-sync --config config.yaml --dry-run
+./bin/jira-board-keeper status-report --config config.yaml --dry-run
+./bin/jira-board-keeper stale-report --config config.yaml --dry-run
 
 # Real run
-./bin/jira-board-reporter label-sync --config config.yaml
-./bin/jira-board-reporter status-report --config config.yaml
-./bin/jira-board-reporter stale-report --config config.yaml
+./bin/jira-board-keeper label-sync --config config.yaml
+./bin/jira-board-keeper status-report --config config.yaml
+./bin/jira-board-keeper stale-report --config config.yaml
 ```
 
 ## GitHub Actions Setup
@@ -76,9 +76,9 @@ CLI flags > Environment variables > config.yaml > defaults
 ## Commands
 
 ```
-jira-board-reporter label-sync       [--dry-run] [--config path]
-jira-board-reporter status-report    [--dry-run] [--lookback-days N] [--config path]
-jira-board-reporter stale-report     [--dry-run] [--epic-threshold N] [--default-threshold N] [--config path]
+jira-board-keeper label-sync       [--dry-run] [--config path]
+jira-board-keeper status-report    [--dry-run] [--lookback-days N] [--config path]
+jira-board-keeper stale-report     [--dry-run] [--epic-threshold N] [--default-threshold N] [--config path]
 ```
 
 ## Docker
@@ -90,5 +90,5 @@ docker run --rm \
   -e JIRA_API_TOKEN=token \
   -e SLACK_WEBHOOK_URL=https://hooks.slack.com/... \
   -v $(pwd)/config.yaml:/config.yaml \
-  jira-board-reporter label-sync --config /config.yaml
+  jira-board-keeper label-sync --config /config.yaml
 ```

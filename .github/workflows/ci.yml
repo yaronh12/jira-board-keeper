@@ -21,4 +21,4 @@ jobs:
         run: go test ./... -v -race -coverprofile=coverage.out
 
       - name: Build
-        run: go build -o jira-board-reporter .
+        run: go build -o jira-board-keeper .
