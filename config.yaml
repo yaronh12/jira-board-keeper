@@ -5,6 +5,15 @@ team:
   name: "Telco Platform Security & Tools Development"
   members:
     - "Yaron Hod"
+    - "Amal Abu Gosh"
+    - "Banashri Mandal"
+    - "Brandon Palm"
+    - "David Elie-Dit-Cosaque"
+    - "George Tannous"
+    - "Gonzalo Reyero Ferreras"
+    - "Juan Antonio Montesinos Delgado"
+    - "Michael Lin"
+    - "Shir Moran"
 
 board:
   label: "telco-sec-tools-team"
