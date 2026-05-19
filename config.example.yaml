@@ -37,6 +37,10 @@ stale_thresholds:
   sub_task: 30
   default: 30
 
+# Label sync settings
+label_sync:
+  lookback_days: 7
+
 # Status report settings
 status_report:
   lookback_days: 7
