@@ -10,11 +10,17 @@ import (
 	"github.com/yaronhod/jira-board-keeper/internal/jira"
 )
 
+type LabeledIssue struct {
+	Key     string
+	Summary string
+}
+
 type SyncResult struct {
 	TotalFound     int
 	AlreadyLabeled int
 	NewlyLabeled   int
 	Errors         int
+	LabeledIssues  []LabeledIssue
 }
 
 type Syncer struct {
@@ -56,6 +62,7 @@ func (s *Syncer) Run(ctx context.Context) (*SyncResult, error) {
 		if s.config.DryRun {
 			s.logger.Info("dry-run: would add label", "issue", issue.Key)
 			result.NewlyLabeled++
+			result.LabeledIssues = append(result.LabeledIssues, LabeledIssue{Key: issue.Key, Summary: issue.Summary})
 			continue
 		}
 
@@ -65,6 +72,7 @@ func (s *Syncer) Run(ctx context.Context) (*SyncResult, error) {
 			continue
 		}
 		result.NewlyLabeled++
+		result.LabeledIssues = append(result.LabeledIssues, LabeledIssue{Key: issue.Key, Summary: issue.Summary})
 	}
 
 	return result, nil

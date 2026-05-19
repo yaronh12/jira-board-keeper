@@ -84,18 +84,46 @@ func FormatStatusReport(teamName string, changes []jira.StatusChange, jiraBaseUR
 	return &Message{Text: fallback, Blocks: blocks}
 }
 
-func FormatLabelSyncReport(teamName string, totalFound, alreadyLabeled, newlyLabeled, errors int) *Message {
-	fallback := fmt.Sprintf("Label Sync - %s: %d newly labeled", teamName, newlyLabeled)
+type LabeledIssue struct {
+	Key     string
+	Summary string
+}
+
+func FormatLabelSyncReport(teamName string, totalFound, alreadyLabeled int, labeledIssues []LabeledIssue, jiraBaseURL string) *Message {
+	fallback := fmt.Sprintf("Label Sync - %s: %d newly labeled", teamName, len(labeledIssues))
 
 	blocks := []Block{
 		header(fmt.Sprintf("Label Sync - %s", teamName)),
 		divider(),
+		section(fmt.Sprintf("Scanned %d issues | %d already labeled | *%d newly labeled*",
+			totalFound, alreadyLabeled, len(labeledIssues))),
 	}
 
-	summary := fmt.Sprintf(
-		"• *Issues scanned:* %d\n• *Already labeled:* %d\n• *Newly labeled:* %d\n• *Errors:* %d",
-		totalFound, alreadyLabeled, newlyLabeled, errors)
-	blocks = append(blocks, section(summary))
+	var lines []string
+	for _, issue := range labeledIssues {
+		issueLink := fmt.Sprintf("<%s/browse/%s|%s>", jiraBaseURL, issue.Key, issue.Key)
+		lines = append(lines, fmt.Sprintf("• %s %s", issueLink, issue.Summary))
+	}
+
+	chunk := strings.Join(lines, "\n")
+	if len(chunk) > 2900 {
+		current := ""
+		for _, line := range lines {
+			if len(current)+len(line)+1 > 2900 {
+				blocks = append(blocks, section(current))
+				current = ""
+			}
+			if current != "" {
+				current += "\n"
+			}
+			current += line
+		}
+		if current != "" {
+			blocks = append(blocks, section(current))
+		}
+	} else {
+		blocks = append(blocks, section(chunk))
+	}
 
 	return &Message{Text: fallback, Blocks: blocks}
 }
