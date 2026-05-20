@@ -10,11 +10,12 @@ import (
 )
 
 var (
-	cfgFile string
-	dryRun  bool
+	cfgFile  string
+	dryRun   bool
+	forceRun bool
 	logLevel string
-	cfg     *config.Config
-	logger  *slog.Logger
+	cfg      *config.Config
+	logger   *slog.Logger
 )
 
 var rootCmd = &cobra.Command{
@@ -49,6 +50,7 @@ func Execute() error {
 func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "config.yaml", "config file path")
 	rootCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "skip writes to Jira and Slack")
+	rootCmd.PersistentFlags().BoolVar(&forceRun, "force", false, "run even if the workflow is disabled in config")
 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "", "log level (debug, info, warn, error)")
 
 	rootCmd.AddCommand(labelSyncCmd)

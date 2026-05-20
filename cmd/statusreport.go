@@ -14,8 +14,8 @@ var statusReportCmd = &cobra.Command{
 	Short: "Send weekly status report to Slack",
 	Long:  "Scans board issues for status changes in the lookback period and sends a summary to Slack.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if !cfg.StatusReport.Enabled {
-			logger.Info("status-report is disabled in config, skipping")
+		if !cfg.StatusReport.Enabled && !forceRun {
+			logger.Info("status-report is disabled in config, skipping (use --force to override)")
 			return nil
 		}
 

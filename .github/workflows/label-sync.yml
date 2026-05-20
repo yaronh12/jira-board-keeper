@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 6 * * 1'
   workflow_dispatch:
+    inputs:
+      force:
+        description: 'Run even if disabled in config'
+        type: boolean
+        default: false
 
 jobs:
   label-sync:
@@ -29,4 +34,4 @@ jobs:
           JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        run: ./jira-board-keeper label-sync --config config.yaml
+        run: ./jira-board-keeper label-sync --config config.yaml ${{ inputs.force == true && '--force' || '' }}

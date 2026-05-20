@@ -15,8 +15,8 @@ var labelSyncCmd = &cobra.Command{
 	Short: "Sync team labels on Jira issues",
 	Long:  "Scans Jira for issues where team members are assignee or reporter, and adds the configured label.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if !cfg.LabelSync.Enabled {
-			logger.Info("label-sync is disabled in config, skipping")
+		if !cfg.LabelSync.Enabled && !forceRun {
+			logger.Info("label-sync is disabled in config, skipping (use --force to override)")
 			return nil
 		}
 

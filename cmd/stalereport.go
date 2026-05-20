@@ -17,8 +17,8 @@ var staleReportCmd = &cobra.Command{
 	Short: "Report stale issues to Slack",
 	Long:  "Scans board issues for items that haven't had a status change within the configured threshold and reports them to Slack.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if !cfg.StaleReport.Enabled {
-			logger.Info("stale-report is disabled in config, skipping")
+		if !cfg.StaleReport.Enabled && !forceRun {
+			logger.Info("stale-report is disabled in config, skipping (use --force to override)")
 			return nil
 		}
 
