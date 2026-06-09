@@ -85,7 +85,7 @@ func (s *Syncer) buildJQL() string {
 	}
 	members := strings.Join(quoted, ", ")
 
-	jql := fmt.Sprintf("(assignee in (%s) OR reporter in (%s))", members, members)
+	jql := fmt.Sprintf("assignee in (%s)", members)
 
 	lookback := s.config.LabelSync.LookbackDays
 	if lookback == 0 {

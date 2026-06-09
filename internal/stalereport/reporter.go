@@ -45,6 +45,10 @@ func (r *Reporter) Run(ctx context.Context) error {
 	staleByType := make(map[string][]slack.StaleIssue)
 
 	for _, issue := range issues {
+		if !r.config.IsStaleReportIssueType(issue.Type) {
+			continue
+		}
+
 		threshold := r.config.GetStaleThreshold(issue.Type)
 		cutoff := now.AddDate(0, 0, -threshold)
 

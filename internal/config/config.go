@@ -54,6 +54,7 @@ type StatusReportConfig struct {
 
 type StaleReportConfig struct {
 	Enabled    bool           `mapstructure:"enabled"`
+	IssueTypes []string       `mapstructure:"issue_types"`
 	Thresholds map[string]int `mapstructure:"thresholds"`
 }
 
@@ -134,6 +135,22 @@ func (c *Config) GetStaleThreshold(issueType string) int {
 		return days
 	}
 	return 30
+}
+
+func (c *Config) IsStaleReportIssueType(issueType string) bool {
+	if len(c.StaleReport.IssueTypes) == 0 {
+		return true
+	}
+	normalized := strings.ToLower(strings.ReplaceAll(issueType, "-", "_"))
+	normalized = strings.ReplaceAll(normalized, " ", "_")
+	for _, t := range c.StaleReport.IssueTypes {
+		tn := strings.ToLower(strings.ReplaceAll(t, "-", "_"))
+		tn = strings.ReplaceAll(tn, " ", "_")
+		if tn == normalized {
+			return true
+		}
+	}
+	return false
 }
 
 func getEnv(key, fallback string) string {
