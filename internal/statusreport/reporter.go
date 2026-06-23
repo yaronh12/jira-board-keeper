@@ -65,6 +65,8 @@ func (r *Reporter) Run(ctx context.Context) error {
 		}
 	}
 
+	allChanges = collapseByIssue(allChanges)
+
 	sort.Slice(allChanges, func(i, j int) bool {
 		return allChanges[i].ChangedAt.After(allChanges[j].ChangedAt)
 	})
@@ -98,6 +100,8 @@ func (r *Reporter) runWithIndividualFetches(ctx context.Context, lookbackDays in
 		}
 	}
 
+	allChanges = collapseByIssue(allChanges)
+
 	sort.Slice(allChanges, func(i, j int) bool {
 		return allChanges[i].ChangedAt.After(allChanges[j].ChangedAt)
 	})
@@ -110,6 +114,37 @@ func (r *Reporter) runWithIndividualFetches(ctx context.Context, lookbackDays in
 func (r *Reporter) buildJQL(lookbackDays int) string {
 	base := r.buildBaseJQL()
 	return fmt.Sprintf("%s AND status CHANGED AFTER \"-%dd\"", base, lookbackDays)
+}
+
+// collapseByIssue merges multiple status transitions for the same issue into
+// a single net transition (earliest FromStatus → latest ToStatus). Transitions
+// that result in no net change (e.g. Review → In Progress → Review) are dropped.
+func collapseByIssue(changes []jira.StatusChange) []jira.StatusChange {
+	grouped := make(map[string][]jira.StatusChange)
+	order := make([]string, 0)
+	for _, c := range changes {
+		if _, seen := grouped[c.IssueKey]; !seen {
+			order = append(order, c.IssueKey)
+		}
+		grouped[c.IssueKey] = append(grouped[c.IssueKey], c)
+	}
+
+	collapsed := make([]jira.StatusChange, 0, len(order))
+	for _, key := range order {
+		group := grouped[key]
+		sort.Slice(group, func(i, j int) bool {
+			return group[i].ChangedAt.Before(group[j].ChangedAt)
+		})
+
+		merged := group[len(group)-1]
+		merged.FromStatus = group[0].FromStatus
+
+		if merged.FromStatus == merged.ToStatus {
+			continue
+		}
+		collapsed = append(collapsed, merged)
+	}
+	return collapsed
 }
 
 func (r *Reporter) buildBaseJQL() string {
