@@ -33,7 +33,7 @@ func (r *Reporter) Run(ctx context.Context) error {
 	r.logger.Info("searching for open issues", "jql", jql)
 
 	issues, err := r.jira.SearchIssues(ctx, jql, jira.SearchOptions{
-		Fields: []string{"key", "summary", "status", "issuetype", "assignee", "created"},
+		Fields: []string{"key", "summary", "status", "issuetype", "assignee", "updated"},
 	})
 	if err != nil {
 		return fmt.Errorf("searching issues: %w", err)
@@ -52,21 +52,15 @@ func (r *Reporter) Run(ctx context.Context) error {
 		threshold := r.config.GetStaleThreshold(issue.Type)
 		cutoff := now.AddDate(0, 0, -threshold)
 
-		lastChange, err := r.getLastStatusChangeDate(ctx, issue)
-		if err != nil {
-			r.logger.Error("failed to get changelog", "issue", issue.Key, "error", err)
+		if issue.Updated.After(cutoff) {
 			continue
 		}
 
-		if lastChange.After(cutoff) {
-			continue
-		}
-
-		daysSince := int(now.Sub(lastChange).Hours() / 24)
+		daysSince := int(now.Sub(issue.Updated).Hours() / 24)
 		staleByType[issue.Type] = append(staleByType[issue.Type], slack.StaleIssue{
 			Issue:           issue,
 			DaysSinceChange: daysSince,
-			LastChangeDate:  lastChange.Format("2006-01-02"),
+			LastChangeDate:  issue.Updated.Format("2006-01-02"),
 		})
 	}
 
@@ -78,25 +72,6 @@ func (r *Reporter) Run(ctx context.Context) error {
 
 	msg := slack.FormatStaleReport(r.config.Team.Name, staleByType, strings.TrimRight(r.config.Jira.BaseURL, "/"))
 	return r.slack.Send(ctx, msg)
-}
-
-func (r *Reporter) getLastStatusChangeDate(ctx context.Context, issue jira.Issue) (time.Time, error) {
-	changes, err := r.jira.GetStatusChanges(ctx, issue.Key)
-	if err != nil {
-		return time.Time{}, err
-	}
-
-	if len(changes) == 0 {
-		return issue.Created, nil
-	}
-
-	latest := changes[0].ChangedAt
-	for _, c := range changes[1:] {
-		if c.ChangedAt.After(latest) {
-			latest = c.ChangedAt
-		}
-	}
-	return latest, nil
 }
 
 func (r *Reporter) buildJQL() string {
