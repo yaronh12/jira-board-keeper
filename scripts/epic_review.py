@@ -155,14 +155,14 @@ def main():
         dry_run_instruction=dry_run_instruction,
     )
 
-    mcp_servers = []
+    mcp_servers = None
     if mcp_token:
-        mcp_servers = [
-            {
+        mcp_servers = {
+            "atlassian": {
                 "url": "https://mcp.atlassian.com/v1/mcp",
                 "headers": {"Authorization": mcp_token},
             }
-        ]
+        }
 
     result = Agent.prompt(
         prompt,
