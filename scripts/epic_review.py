@@ -170,7 +170,7 @@ def main():
             api_key=api_key,
             model=model,
             cloud=CloudAgentOptions(
-                repos=[{"owner": "yaronh12", "name": "jira-board-keeper"}],
+                repos=[{"url": "https://github.com/yaronh12/jira-board-keeper"}],
             ),
             mcp_servers=mcp_servers if mcp_servers else None,
         ),
