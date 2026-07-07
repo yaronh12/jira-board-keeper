@@ -155,7 +155,7 @@ def main():
         dry_run_instruction=dry_run_instruction,
     )
 
-    mcp_servers = None
+    mcp_servers = []
     if mcp_token:
         mcp_servers = [
             {
@@ -164,17 +164,17 @@ def main():
             }
         ]
 
-    opts = AgentOptions(
-        api_key=api_key,
-        model=model,
-        cloud=CloudAgentOptions(
-            repos=["yaronhod/jira-board-keeper"],
+    result = Agent.prompt(
+        prompt,
+        AgentOptions(
+            api_key=api_key,
+            model=model,
+            cloud=CloudAgentOptions(
+                repos=["yaronhod/jira-board-keeper"],
+            ),
+            mcp_servers=mcp_servers if mcp_servers else None,
         ),
     )
-    if mcp_servers:
-        opts.mcp_servers = mcp_servers
-
-    result = Agent.prompt(prompt, opts)
 
     print(f"\nAgent status: {result.status}")
     if result.result:
