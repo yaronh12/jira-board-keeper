@@ -40,5 +40,27 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: >-
           ./jira-board-keeper label-sync --config config.yaml
+          --output-epics candidates.json
           ${{ inputs.force == true && '--force' || '' }}
           ${{ inputs.dry_run == true && '--dry-run' || '' }}
+
+      - name: Set up Python
+        if: hashFiles('candidates.json') != ''
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install cursor-sdk
+        if: hashFiles('candidates.json') != ''
+        run: pip install -r scripts/requirements.txt
+
+      - name: Run epic style review
+        if: hashFiles('candidates.json') != ''
+        run: |
+          TOKEN=$(echo -n "$JIRA_EMAIL:$JIRA_API_TOKEN" | base64)
+          cat candidates.json | ATLASSIAN_MCP_TOKEN="Basic $TOKEN" python scripts/epic_review.py
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          EPIC_REVIEW_DRY_RUN: ${{ inputs.dry_run == true && 'true' || 'false' }}

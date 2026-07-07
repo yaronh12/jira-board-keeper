@@ -111,6 +111,38 @@ func TestRun_DryRun(t *testing.T) {
 	}
 }
 
+func TestRun_ReviewCandidates(t *testing.T) {
+	mock := &mockJiraClient{
+		issues: []jira.Issue{
+			{Key: "CNF-100", Type: "Epic", Labels: []string{"team-label"}},
+			{Key: "CNF-101", Type: "Story", Labels: []string{"team-label"}},
+			{Key: "CNF-102", Type: "Feature", Labels: []string{}},
+			{Key: "CNF-103", Type: "Bug", Labels: []string{}},
+			{Key: "CNF-104", Type: "epic", Labels: []string{"team-label"}},
+		},
+	}
+	cfg := &config.Config{
+		Team:  config.TeamConfig{Members: []string{"user1"}},
+		Board: config.BoardConfig{Label: "team-label"},
+	}
+
+	syncer := New(mock, cfg, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	result, err := syncer.Run(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result.ReviewCandidates) != 3 {
+		t.Fatalf("expected 3 review candidates (2 epics + 1 feature), got %d: %v",
+			len(result.ReviewCandidates), result.ReviewCandidates)
+	}
+	expected := map[string]bool{"CNF-100": true, "CNF-102": true, "CNF-104": true}
+	for _, key := range result.ReviewCandidates {
+		if !expected[key] {
+			t.Errorf("unexpected review candidate: %s", key)
+		}
+	}
+}
+
 func TestRun_AddLabelError(t *testing.T) {
 	mock := &mockJiraClient{
 		issues: []jira.Issue{

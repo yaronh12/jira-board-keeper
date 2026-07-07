@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -9,6 +11,8 @@ import (
 	"github.com/yaronhod/jira-board-keeper/internal/labelsync"
 	"github.com/yaronhod/jira-board-keeper/internal/slack"
 )
+
+var outputEpicsPath string
 
 var labelSyncCmd = &cobra.Command{
 	Use:   "label-sync",
@@ -60,6 +64,21 @@ var labelSyncCmd = &cobra.Command{
 			}
 		}
 
+		if outputEpicsPath != "" && len(result.ReviewCandidates) > 0 {
+			data, err := json.Marshal(result.ReviewCandidates)
+			if err != nil {
+				return fmt.Errorf("marshaling review candidates: %w", err)
+			}
+			if err := os.WriteFile(outputEpicsPath, data, 0644); err != nil {
+				return fmt.Errorf("writing review candidates to %s: %w", outputEpicsPath, err)
+			}
+			logger.Info("wrote review candidates", "path", outputEpicsPath, "count", len(result.ReviewCandidates))
+		}
+
 		return nil
 	},
+}
+
+func init() {
+	labelSyncCmd.Flags().StringVar(&outputEpicsPath, "output-epics", "", "write Epic/Feature issue keys as JSON to this file path")
 }

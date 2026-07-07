@@ -10,17 +10,23 @@ import (
 	"github.com/yaronhod/jira-board-keeper/internal/jira"
 )
 
+var reviewCandidateTypes = map[string]bool{
+	"epic":    true,
+	"feature": true,
+}
+
 type LabeledIssue struct {
 	Key     string
 	Summary string
 }
 
 type SyncResult struct {
-	TotalFound     int
-	AlreadyLabeled int
-	NewlyLabeled   int
-	Errors         int
-	LabeledIssues  []LabeledIssue
+	TotalFound       int
+	AlreadyLabeled   int
+	NewlyLabeled     int
+	Errors           int
+	LabeledIssues    []LabeledIssue
+	ReviewCandidates []string
 }
 
 type Syncer struct {
@@ -42,7 +48,7 @@ func (s *Syncer) Run(ctx context.Context) (*SyncResult, error) {
 	s.logger.Info("searching for team issues", "jql", jql)
 
 	issues, err := s.jira.SearchIssues(ctx, jql, jira.SearchOptions{
-		Fields: []string{"key", "labels", "summary", "assignee", "reporter"},
+		Fields: []string{"key", "labels", "summary", "assignee", "reporter", "issuetype"},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("searching issues: %w", err)
@@ -73,6 +79,12 @@ func (s *Syncer) Run(ctx context.Context) (*SyncResult, error) {
 		}
 		result.NewlyLabeled++
 		result.LabeledIssues = append(result.LabeledIssues, LabeledIssue{Key: issue.Key, Summary: issue.Summary})
+	}
+
+	for _, issue := range issues {
+		if reviewCandidateTypes[strings.ToLower(issue.Type)] {
+			result.ReviewCandidates = append(result.ReviewCandidates, issue.Key)
+		}
 	}
 
 	return result, nil
