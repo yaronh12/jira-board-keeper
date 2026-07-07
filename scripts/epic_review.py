@@ -18,7 +18,7 @@ import json
 import os
 import sys
 
-from cursor_sdk import Agent, AgentOptions, CloudAgentOptions
+from cursor_sdk import Agent, AgentOptions, LocalAgentOptions
 
 SKILL_PROMPT = """\
 You are a Jira hygiene bot. For each issue key provided, fetch its full \
@@ -169,9 +169,7 @@ def main():
         AgentOptions(
             api_key=api_key,
             model=model,
-            cloud=CloudAgentOptions(
-                repos=[{"url": "https://github.com/yaronh12/jira-board-keeper"}],
-            ),
+            local=LocalAgentOptions(cwd=os.getcwd()),
             mcp_servers=mcp_servers if mcp_servers else None,
         ),
     )
