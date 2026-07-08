@@ -332,7 +332,7 @@ def main():
             print(f"Suggestion:\n{issue['suggested_description'][:500]}...")
         sys.exit(0)
 
-    if dry_run:
+    if dry_run and not dm_override:
         print("\nDRY RUN — would send DMs to:")
         for issue in failing_issues:
             print(f"  {issue.get('assignee_email', 'unassigned')} for {issue['key']}")
