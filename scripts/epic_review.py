@@ -264,35 +264,36 @@ def post_slack_notification(webhook_url, issue, github_issue_url, jira_base_url)
 
 
 def get_existing_review_issues(token, repo):
-    """Fetch open issues with the epic-review label and return the set of Jira keys already tracked."""
+    """Fetch all issues (open and closed) with the epic-review label and return the set of Jira keys already tracked."""
     tracked_keys = set()
-    page = 1
-    while True:
-        resp = requests.get(
-            f"https://api.github.com/repos/{repo}/issues",
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Accept": "application/vnd.github+json",
-            },
-            params={
-                "labels": "epic-review",
-                "state": "open",
-                "per_page": 100,
-                "page": page,
-            },
-            timeout=15,
-        )
-        if resp.status_code != 200:
-            print(f"  Warning: could not fetch existing issues: {resp.status_code}", file=sys.stderr)
-            break
-        issues = resp.json()
-        if not issues:
-            break
-        for gh_issue in issues:
-            match = re.search(r"Epic Review:\s+([A-Z]+-\d+)", gh_issue.get("title", ""))
-            if match:
-                tracked_keys.add(match.group(1))
-        page += 1
+    for state in ("open", "closed"):
+        page = 1
+        while True:
+            resp = requests.get(
+                f"https://api.github.com/repos/{repo}/issues",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "application/vnd.github+json",
+                },
+                params={
+                    "labels": "epic-review",
+                    "state": state,
+                    "per_page": 100,
+                    "page": page,
+                },
+                timeout=15,
+            )
+            if resp.status_code != 200:
+                print(f"  Warning: could not fetch {state} issues: {resp.status_code}", file=sys.stderr)
+                break
+            issues = resp.json()
+            if not issues:
+                break
+            for gh_issue in issues:
+                match = re.search(r"Epic Review:\s+([A-Z]+-\d+)", gh_issue.get("title", ""))
+                if match:
+                    tracked_keys.add(match.group(1))
+            page += 1
     return tracked_keys
 
 
