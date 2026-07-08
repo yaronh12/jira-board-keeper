@@ -263,6 +263,39 @@ def post_slack_notification(webhook_url, issue, github_issue_url, jira_base_url)
     return resp.status_code == 200
 
 
+def get_existing_review_issues(token, repo):
+    """Fetch open issues with the epic-review label and return the set of Jira keys already tracked."""
+    tracked_keys = set()
+    page = 1
+    while True:
+        resp = requests.get(
+            f"https://api.github.com/repos/{repo}/issues",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github+json",
+            },
+            params={
+                "labels": "epic-review",
+                "state": "open",
+                "per_page": 100,
+                "page": page,
+            },
+            timeout=15,
+        )
+        if resp.status_code != 200:
+            print(f"  Warning: could not fetch existing issues: {resp.status_code}", file=sys.stderr)
+            break
+        issues = resp.json()
+        if not issues:
+            break
+        for gh_issue in issues:
+            match = re.search(r"Epic Review:\s+([A-Z]+-\d+)", gh_issue.get("title", ""))
+            if match:
+                tracked_keys.add(match.group(1))
+        page += 1
+    return tracked_keys
+
+
 def main():
     api_key = os.environ.get("CURSOR_API_KEY")
     if not api_key:
@@ -357,9 +390,16 @@ def main():
             print(f"Suggestion:\n{issue['suggested_description'][:500]}...")
         sys.exit(1)
 
+    already_tracked = get_existing_review_issues(github_token, github_repo)
+    if already_tracked:
+        print(f"\nSkipping {len(already_tracked)} already-tracked issue(s): {', '.join(sorted(already_tracked))}")
+
     created = 0
     notified = 0
     for issue in failing_issues:
+        if issue["key"] in already_tracked:
+            print(f"  {issue['key']}: open review issue exists, skipping")
+            continue
         gh_url = create_github_issue(github_token, github_repo, issue, github_usernames)
         if gh_url:
             print(f"  {issue['key']}: created {gh_url}")
