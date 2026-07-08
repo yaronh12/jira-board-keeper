@@ -1,0 +1,79 @@
+name: Apply Epic Review
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  apply:
+    if: >-
+      contains(github.event.comment.body, '/approve') &&
+      contains(github.event.issue.labels.*.name, 'epic-review') &&
+      github.event.issue.state == 'open'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract Jira key and description from issue
+        id: extract
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.issue.body;
+
+            // Extract Jira key from title: "Epic Review: CNF-23305 — ..."
+            const title = context.payload.issue.title;
+            const keyMatch = title.match(/Epic Review:\s+([A-Z]+-\d+)/);
+            if (!keyMatch) {
+              core.setFailed('Could not extract Jira key from issue title');
+              return;
+            }
+            core.setOutput('jira_key', keyMatch[1]);
+
+            // Extract suggested description from code fence
+            const descMatch = body.match(/### Suggested Description[\s\S]*?```\n([\s\S]*?)\n```/);
+            if (!descMatch) {
+              core.setFailed('Could not extract suggested description from issue body');
+              return;
+            }
+            // Write to file to avoid shell escaping issues
+            const fs = require('fs');
+            fs.writeFileSync('/tmp/description.txt', descMatch[1]);
+            core.setOutput('description_file', '/tmp/description.txt');
+
+      - name: Update Jira issue
+        env:
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_BASE_URL: "https://redhat.atlassian.net"
+          JIRA_KEY: ${{ steps.extract.outputs.jira_key }}
+        run: |
+          echo "Updating $JIRA_KEY description..."
+          DESCRIPTION=$(cat /tmp/description.txt)
+
+          # Jira Cloud API v3 expects ADF; use v2 for plain text description
+          curl -s -o /dev/null -w "%{http_code}" \
+            -X PUT \
+            -H "Content-Type: application/json" \
+            -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+            "$JIRA_BASE_URL/rest/api/2/issue/$JIRA_KEY" \
+            -d "$(jq -n --arg desc "$DESCRIPTION" '{fields: {description: $desc}}')" \
+            | grep -q "204" && echo "Success: $JIRA_KEY updated" || echo "Failed to update $JIRA_KEY"
+
+      - name: Close issue and comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const key = '${{ steps.extract.outputs.jira_key }}';
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `✅ Description for **${key}** has been pushed to Jira. Closing this issue.`
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              state: 'closed'
+            });

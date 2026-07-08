@@ -1,18 +1,24 @@
 #!/usr/bin/env python3
-"""Score Epic/Feature descriptions and DM assignees with suggested improvements.
+"""Score Epic/Feature descriptions, create GitHub Issues for review, notify via Slack.
 
 Reads a JSON array of Jira issue keys from stdin, dispatches a Cursor SDK agent
-to score each issue, then sends a Slack DM to assignees whose epics fail the
-threshold — including the score, gaps, and a suggested improved description.
+to score each issue, then for each failing issue:
+  1. Creates a GitHub Issue with the suggested improved description
+  2. Posts to the team Slack channel notifying the assignee
+
+The assignee reviews the GitHub Issue and comments "/approve" to trigger
+the description update in Jira.
 
 Required environment variables:
   CURSOR_API_KEY       - Cursor API key (crsr_...)
-  SLACK_BOT_TOKEN      - Slack bot token (xoxb-...) with chat:write, users:read.email
+  GITHUB_TOKEN         - GitHub token for creating issues (auto-provided in Actions)
+  GITHUB_REPOSITORY    - owner/repo (auto-provided in Actions)
 
 Optional:
   ATLASSIAN_MCP_TOKEN  - Auth header for Atlassian MCP server
+  SLACK_WEBHOOK_URL    - Slack incoming webhook for team channel notifications
   CURSOR_MODEL         - Model ID (default: composer-2.5)
-  EPIC_REVIEW_DRY_RUN  - Set to "true" to skip sending DMs (print only)
+  EPIC_REVIEW_DRY_RUN  - Set to "true" to skip creating issues/posting (print only)
   JIRA_BASE_URL        - Jira instance URL (default: https://redhat.atlassian.net)
 """
 
@@ -120,6 +126,7 @@ Include one object per issue that FAILS its threshold. If all pass, output `[]`.
 
 Each object must have these fields:
 - "key": the Jira issue key (string)
+- "assignee_name": the assignee's display name from Jira (string, or "" if unassigned)
 - "assignee_email": the assignee's email from Jira (string, or "" if unassigned)
 - "summary": the issue summary/title (string)
 - "score": e.g. "7/12" (string)
@@ -131,112 +138,6 @@ Each object must have these fields:
 
 Review the following issues: {keys}
 """
-
-
-def lookup_slack_user(bot_token, email):
-    """Resolve a Slack user ID from their email address."""
-    resp = requests.get(
-        "https://slack.com/api/users.lookupByEmail",
-        headers={"Authorization": f"Bearer {bot_token}"},
-        params={"email": email},
-        timeout=10,
-    )
-    data = resp.json()
-    if data.get("ok"):
-        return data["user"]["id"]
-    return None
-
-
-def send_slack_dm(bot_token, user_id, blocks, fallback_text):
-    """Send a Block Kit DM to a Slack user."""
-    resp = requests.post(
-        "https://slack.com/api/chat.postMessage",
-        headers={"Authorization": f"Bearer {bot_token}"},
-        json={"channel": user_id, "text": fallback_text, "blocks": blocks},
-        timeout=10,
-    )
-    return resp.json().get("ok", False)
-
-
-def format_dm_blocks(issue, jira_base_url):
-    """Build Slack Block Kit blocks for a review DM."""
-    key = issue["key"]
-    summary = issue.get("summary", "")
-    score = issue["score"]
-    threshold = issue["threshold"]
-    gaps = issue["gaps"]
-    suggestion = issue["suggested_description"]
-
-    issue_url = f"{jira_base_url}/browse/{key}"
-
-    blocks = [
-        {
-            "type": "header",
-            "text": {"type": "plain_text", "text": f"Epic Review: {key}"},
-        },
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": (
-                    f"*<{issue_url}|{key}>* {summary}\n"
-                    f"Score: *{score}* (need {threshold}) — *BELOW THRESHOLD*"
-                ),
-            },
-        },
-        {"type": "divider"},
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": "*Missing criteria:*\n" + "\n".join(f"• {g}" for g in gaps),
-            },
-        },
-        {"type": "divider"},
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": "*Suggested description:*",
-            },
-        },
-    ]
-
-    # Slack has a 3000 char limit per text block — split if needed
-    desc_chunks = split_text(suggestion, 2900)
-    for chunk in desc_chunks:
-        blocks.append(
-            {
-                "type": "section",
-                "text": {"type": "mrkdwn", "text": f"```{chunk}```"},
-            }
-        )
-
-    blocks.append(
-        {
-            "type": "context",
-            "elements": [
-                {
-                    "type": "mrkdwn",
-                    "text": "This is a suggestion from the epic hygiene bot. "
-                    "Copy and paste the description into the Jira issue if it looks good.",
-                }
-            ],
-        }
-    )
-
-    return blocks
-
-
-def split_text(text, max_len):
-    """Split text into chunks that fit within max_len."""
-    if len(text) <= max_len:
-        return [text]
-    chunks = []
-    while text:
-        chunks.append(text[:max_len])
-        text = text[max_len:]
-    return chunks
 
 
 def extract_json_from_result(result_text):
@@ -251,18 +152,108 @@ def extract_json_from_result(result_text):
     return json.loads(text)
 
 
+def create_github_issue(token, repo, issue):
+    """Create a GitHub Issue for a failing epic with the suggested description."""
+    key = issue["key"]
+    score = issue["score"]
+    threshold = issue["threshold"]
+    gaps = issue["gaps"]
+    suggestion = issue["suggested_description"]
+    assignee_name = issue.get("assignee_name", "Unassigned")
+    jira_base_url = os.environ.get("JIRA_BASE_URL", "https://redhat.atlassian.net").rstrip("/")
+
+    title = f"Epic Review: {key} — {score} (need {threshold})"
+
+    body = f"""## {key}: {issue.get('summary', '')}
+
+**Jira:** {jira_base_url}/browse/{key}
+**Assignee:** {assignee_name}
+**Score:** {score} (threshold: {threshold})
+
+### Missing Criteria
+
+{chr(10).join(f'- {g}' for g in gaps)}
+
+### Suggested Description
+
+To approve this change, comment `/approve` on this issue.
+
+```
+{suggestion}
+```
+
+---
+*Generated by epic-style-review bot. Comment `/approve` to push this description to Jira.*
+"""
+
+    resp = requests.post(
+        f"https://api.github.com/repos/{repo}/issues",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+        },
+        json={
+            "title": title,
+            "body": body,
+            "labels": ["epic-review"],
+        },
+        timeout=15,
+    )
+
+    if resp.status_code == 201:
+        return resp.json()["html_url"]
+    print(f"  Failed to create issue for {key}: {resp.status_code} {resp.text}", file=sys.stderr)
+    return None
+
+
+def post_slack_notification(webhook_url, issue, github_issue_url, jira_base_url):
+    """Post a Slack message to the team channel about a failing epic."""
+    key = issue["key"]
+    score = issue["score"]
+    threshold = issue["threshold"]
+    assignee = issue.get("assignee_name", "Unassigned")
+    summary = issue.get("summary", "")
+    jira_url = f"{jira_base_url}/browse/{key}"
+
+    blocks = [
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f":clipboard: *Epic Review: <{jira_url}|{key}>*\n"
+                    f">{summary}\n\n"
+                    f"*Score:* {score} (need {threshold}) — *BELOW THRESHOLD*\n"
+                    f"*Assignee:* {assignee}\n"
+                    f"*Review & approve:* <{github_issue_url}|GitHub Issue>"
+                ),
+            },
+        },
+    ]
+
+    fallback = f"Epic Review: {key} scored {score} (need {threshold}) — {assignee} please review: {github_issue_url}"
+
+    resp = requests.post(
+        webhook_url,
+        json={"text": fallback, "blocks": blocks},
+        timeout=10,
+    )
+    return resp.status_code == 200
+
+
 def main():
     api_key = os.environ.get("CURSOR_API_KEY")
     if not api_key:
         print("ERROR: CURSOR_API_KEY environment variable is required", file=sys.stderr)
         sys.exit(1)
 
-    slack_token = os.environ.get("SLACK_BOT_TOKEN", "")
+    github_token = os.environ.get("GITHUB_TOKEN", "")
+    github_repo = os.environ.get("GITHUB_REPOSITORY", "")
+    slack_webhook = os.environ.get("SLACK_WEBHOOK_URL", "")
     mcp_token = os.environ.get("ATLASSIAN_MCP_TOKEN", "")
     model = os.environ.get("CURSOR_MODEL", "composer-2.5")
     dry_run = os.environ.get("EPIC_REVIEW_DRY_RUN", "").lower() in ("true", "1")
     jira_base_url = os.environ.get("JIRA_BASE_URL", "https://redhat.atlassian.net").rstrip("/")
-    dm_override = os.environ.get("DM_OVERRIDE_EMAIL", "")
 
     raw_input = sys.stdin.read().strip()
     if not raw_input:
@@ -307,7 +298,6 @@ def main():
         print("Agent returned no output")
         sys.exit(0)
 
-    # Parse structured JSON from agent output
     try:
         failing_issues = extract_json_from_result(result.result)
     except (json.JSONDecodeError, TypeError) as e:
@@ -316,61 +306,46 @@ def main():
         sys.exit(2)
 
     if not failing_issues:
-        print("All issues pass their threshold. No DMs to send.")
+        print("All issues pass their threshold. Nothing to do.")
         sys.exit(0)
 
     print(f"\n{len(failing_issues)} issue(s) below threshold:")
     for issue in failing_issues:
         print(f"  {issue['key']}: {issue['score']} (need {issue['threshold']})")
 
-    if not slack_token:
-        print("\nSLACK_BOT_TOKEN not set — printing suggestions only (no DMs sent)")
+    if dry_run:
+        print("\nDRY RUN — would create GitHub Issues and notify Slack for:")
+        for issue in failing_issues:
+            print(f"  {issue['key']} (assignee: {issue.get('assignee_name', 'unknown')})")
+        sys.exit(0)
+
+    if not github_token or not github_repo:
+        print("\nGITHUB_TOKEN or GITHUB_REPOSITORY not set — cannot create issues")
+        print("Results:")
         for issue in failing_issues:
             print(f"\n--- {issue['key']} ({issue['score']}) ---")
-            print(f"Assignee: {issue.get('assignee_email', 'unknown')}")
             print(f"Gaps: {', '.join(issue['gaps'])}")
             print(f"Suggestion:\n{issue['suggested_description'][:500]}...")
-        sys.exit(0)
+        sys.exit(1)
 
-    if dry_run and not dm_override:
-        print("\nDRY RUN — would send DMs to:")
-        for issue in failing_issues:
-            print(f"  {issue.get('assignee_email', 'unassigned')} for {issue['key']}")
-        sys.exit(0)
-
-    # Send Slack DMs
-    if dm_override:
-        print(f"\nDM_OVERRIDE_EMAIL set — all DMs will go to: {dm_override}")
-
-    sent = 0
-    skipped = 0
+    created = 0
+    notified = 0
     for issue in failing_issues:
-        email = issue.get("assignee_email", "")
-        target_email = dm_override if dm_override else email
-        if not target_email:
-            print(f"  {issue['key']}: no assignee email, skipping DM")
-            skipped += 1
-            continue
+        gh_url = create_github_issue(github_token, github_repo, issue)
+        if gh_url:
+            print(f"  {issue['key']}: created {gh_url}")
+            created += 1
 
-        user_id = lookup_slack_user(slack_token, target_email)
-        if not user_id:
-            print(f"  {issue['key']}: could not find Slack user for {target_email}, skipping")
-            skipped += 1
-            continue
-
-        blocks = format_dm_blocks(issue, jira_base_url)
-        fallback = f"Epic Review: {issue['key']} scored {issue['score']} (need {issue['threshold']})"
-
-        ok = send_slack_dm(slack_token, user_id, blocks, fallback)
-        if ok:
-            print(f"  {issue['key']}: DM sent to {target_email}" +
-                  (f" (on behalf of {email})" if dm_override and email != dm_override else ""))
-            sent += 1
+            if slack_webhook:
+                ok = post_slack_notification(slack_webhook, issue, gh_url, jira_base_url)
+                if ok:
+                    notified += 1
+                else:
+                    print(f"  {issue['key']}: Slack notification failed")
         else:
-            print(f"  {issue['key']}: failed to send DM to {target_email}")
-            skipped += 1
+            print(f"  {issue['key']}: failed to create GitHub issue")
 
-    print(f"\nDone. Sent: {sent}, Skipped: {skipped}")
+    print(f"\nDone. Issues created: {created}, Slack notifications: {notified}")
 
 
 if __name__ == "__main__":

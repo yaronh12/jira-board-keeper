@@ -13,10 +13,6 @@ on:
         description: 'Dry run (no writes to Jira or Slack)'
         type: boolean
         default: false
-      dm_override_email:
-        description: 'Send all DMs to this email instead of assignees (for testing)'
-        type: string
-        default: ''
 
 jobs:
   label-sync:
@@ -65,9 +61,10 @@ jobs:
           cat candidates.json | ATLASSIAN_MCP_TOKEN="Basic $TOKEN" python scripts/epic_review.py
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
           JIRA_BASE_URL: "https://redhat.atlassian.net"
           EPIC_REVIEW_DRY_RUN: ${{ inputs.dry_run == true && 'true' || 'false' }}
-          DM_OVERRIDE_EMAIL: ${{ inputs.dm_override_email }}
