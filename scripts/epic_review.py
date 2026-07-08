@@ -197,18 +197,33 @@ To approve this change, comment `/approve` on this issue.
     if gh_username:
         payload["assignees"] = [gh_username]
 
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+    }
+
     resp = requests.post(
         f"https://api.github.com/repos/{repo}/issues",
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/vnd.github+json",
-        },
+        headers=headers,
         json=payload,
         timeout=15,
     )
 
     if resp.status_code == 201:
         return resp.json()["html_url"]
+
+    if resp.status_code == 422 and "assignees" in payload:
+        print(f"  {key}: assignee failed, retrying without assignee", file=sys.stderr)
+        del payload["assignees"]
+        resp = requests.post(
+            f"https://api.github.com/repos/{repo}/issues",
+            headers=headers,
+            json=payload,
+            timeout=15,
+        )
+        if resp.status_code == 201:
+            return resp.json()["html_url"]
+
     print(f"  Failed to create issue for {key}: {resp.status_code} {resp.text}", file=sys.stderr)
     return None
 
