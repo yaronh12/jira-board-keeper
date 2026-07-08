@@ -13,6 +13,14 @@ on:
         description: 'Dry run (no writes to Jira or Slack)'
         type: boolean
         default: false
+      review_keys:
+        description: 'Comma-separated Jira keys to review (skips label-sync scan)'
+        type: string
+        default: ''
+      slack_webhook_override:
+        description: 'Override Slack webhook URL (for testing with a different channel)'
+        type: string
+        default: ''
 
 jobs:
   label-sync:
@@ -44,18 +52,32 @@ jobs:
           ${{ inputs.force == true && '--force' || '' }}
           ${{ inputs.dry_run == true && '--dry-run' || '' }}
 
+      - name: Prepare review candidates
+        id: candidates
+        run: |
+          if [ -n "$REVIEW_KEYS" ]; then
+            echo "$REVIEW_KEYS" | tr ',' '\n' | jq -R . | jq -s . > candidates.json
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          elif [ -f candidates.json ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          REVIEW_KEYS: ${{ inputs.review_keys }}
+
       - name: Set up Python
-        if: hashFiles('candidates.json') != ''
+        if: steps.candidates.outputs.ready == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
       - name: Install cursor-sdk
-        if: hashFiles('candidates.json') != ''
+        if: steps.candidates.outputs.ready == 'true'
         run: pip install -r scripts/requirements.txt
 
       - name: Run epic style review
-        if: hashFiles('candidates.json') != ''
+        if: steps.candidates.outputs.ready == 'true'
         run: |
           TOKEN=$(echo -n "$JIRA_EMAIL:$JIRA_API_TOKEN" | base64)
           cat candidates.json | ATLASSIAN_MCP_TOKEN="Basic $TOKEN" python scripts/epic_review.py
@@ -63,7 +85,7 @@ jobs:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ inputs.slack_webhook_override || secrets.SLACK_WEBHOOK_URL }}
           JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
           JIRA_BASE_URL: "https://redhat.atlassian.net"
