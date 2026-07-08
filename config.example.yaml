@@ -6,12 +6,13 @@ jira:
   #   JIRA_API_TOKEN - API token from https://id.atlassian.com/manage-profile/security/api-tokens
 
 # Team configuration
+# Members map: "Jira Display Name" -> "GitHub username" (empty string if unknown)
 team:
   name: "My Team"
   members:
-    - "jsmith"
-    - "jdoe"
-    - "aturing"
+    "John Smith": "jsmith"
+    "Jane Doe": "jdoe"
+    "Alan Turing": "aturing"
 
 # Board/Label configuration
 board:

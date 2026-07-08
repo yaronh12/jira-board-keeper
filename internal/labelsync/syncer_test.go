@@ -46,7 +46,7 @@ func TestRun_AllAlreadyLabeled(t *testing.T) {
 		},
 	}
 	cfg := &config.Config{
-		Team:  config.TeamConfig{Members: []string{"user1"}},
+		Team:  config.TeamConfig{Members: map[string]string{"user1": ""}},
 		Board: config.BoardConfig{Label: "team-label"},
 	}
 
@@ -69,7 +69,7 @@ func TestRun_MixedLabeled(t *testing.T) {
 		},
 	}
 	cfg := &config.Config{
-		Team:  config.TeamConfig{Members: []string{"user1"}},
+		Team:  config.TeamConfig{Members: map[string]string{"user1": ""}},
 		Board: config.BoardConfig{Label: "team-label"},
 	}
 
@@ -93,7 +93,7 @@ func TestRun_DryRun(t *testing.T) {
 		},
 	}
 	cfg := &config.Config{
-		Team:   config.TeamConfig{Members: []string{"user1"}},
+		Team:   config.TeamConfig{Members: map[string]string{"user1": ""}},
 		Board:  config.BoardConfig{Label: "team-label"},
 		DryRun: true,
 	}
@@ -122,7 +122,7 @@ func TestRun_ReviewCandidates(t *testing.T) {
 		},
 	}
 	cfg := &config.Config{
-		Team:  config.TeamConfig{Members: []string{"user1"}},
+		Team:  config.TeamConfig{Members: map[string]string{"user1": ""}},
 		Board: config.BoardConfig{Label: "team-label"},
 	}
 
@@ -151,7 +151,7 @@ func TestRun_AddLabelError(t *testing.T) {
 		addLabelErr: fmt.Errorf("permission denied"),
 	}
 	cfg := &config.Config{
-		Team:  config.TeamConfig{Members: []string{"user1"}},
+		Team:  config.TeamConfig{Members: map[string]string{"user1": ""}},
 		Board: config.BoardConfig{Label: "team-label"},
 	}
 

@@ -267,7 +267,7 @@ def main():
     if os.path.exists(config_path):
         with open(config_path) as f:
             config = yaml.safe_load(f)
-        github_usernames = config.get("team", {}).get("github_usernames", {})
+        github_usernames = config.get("team", {}).get("members", {})
 
     raw_input = sys.stdin.read().strip()
     if not raw_input:

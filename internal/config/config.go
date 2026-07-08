@@ -27,8 +27,8 @@ type JiraConfig struct {
 }
 
 type TeamConfig struct {
-	Name    string   `mapstructure:"name"`
-	Members []string `mapstructure:"members"`
+	Name    string            `mapstructure:"name"`
+	Members map[string]string `mapstructure:"members"`
 }
 
 type BoardConfig struct {
@@ -111,7 +111,7 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("jira.base_url is required")
 	}
 	if len(c.Team.Members) == 0 {
-		return fmt.Errorf("team.members must have at least one entry")
+		return fmt.Errorf("team.members must have at least one entry (map of Jira name to GitHub username)")
 	}
 	if c.Board.Label == "" {
 		return fmt.Errorf("board.label is required")
@@ -151,6 +151,14 @@ func (c *Config) IsStaleReportIssueType(issueType string) bool {
 		}
 	}
 	return false
+}
+
+func (c *Config) MemberNames() []string {
+	names := make([]string, 0, len(c.Team.Members))
+	for name := range c.Team.Members {
+		names = append(names, name)
+	}
+	return names
 }
 
 func getEnv(key, fallback string) string {

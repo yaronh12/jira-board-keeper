@@ -91,8 +91,9 @@ func (s *Syncer) Run(ctx context.Context) (*SyncResult, error) {
 }
 
 func (s *Syncer) buildJQL() string {
-	quoted := make([]string, len(s.config.Team.Members))
-	for i, m := range s.config.Team.Members {
+	names := s.config.MemberNames()
+	quoted := make([]string, len(names))
+	for i, m := range names {
 		quoted[i] = fmt.Sprintf("%q", m)
 	}
 	members := strings.Join(quoted, ", ")
