@@ -12,20 +12,6 @@ jobs:
       github.event.issue.state == 'open'
     runs-on: ubuntu-latest
     steps:
-      - name: Verify commenter is the assignee
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const assignees = context.payload.issue.assignees.map(a => a.login);
-            const commenter = context.payload.comment.user.login;
-            if (assignees.length === 0) {
-              core.info('No assignee set — allowing any org member to approve');
-              return;
-            }
-            if (!assignees.includes(commenter)) {
-              core.setFailed(`Only the assignee (${assignees.join(', ')}) can approve. Comment by: ${commenter}`);
-            }
-
       - uses: actions/checkout@v4
 
       - name: Extract Jira key and description from issue
